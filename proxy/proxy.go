@@ -19,7 +19,7 @@ package proxy
 import (
 	"fmt"
 	log "github.com/Sirupsen/logrus"
-	"gitlab.cern.ch/fts/lmt"
+	"gitlab.cern.ch/fts/lmt/lmt"
 	"golang.org/x/net/websocket"
 	"io"
 	"net"
@@ -50,7 +50,7 @@ func dump(dst io.Writer, src io.Reader, wg *sync.WaitGroup) {
 }
 
 // Starts two seperate go routines to pipe data through the proxy.
-func ProxyWire(ws *websocket.Conn, conn net.Conn) {
+func Pipeline(ws *websocket.Conn, conn net.Conn) {
 	log.Info("Wiring ", ws.RemoteAddr(), " <=> ", conn.RemoteAddr())
 	wg := &sync.WaitGroup{}
 	wg.Add(2)
@@ -119,7 +119,7 @@ func ProxyListen(ws *websocket.Conn) {
 			return
 		}
 
-		ProxyWire(ws, conn)
+		Pipeline(ws, conn)
 		conn.Close()
 	}
 
