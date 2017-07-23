@@ -1,41 +1,69 @@
+/*
+ * Copyright (c) CERN 2017
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package main
 
 import (
-	log "github.com/Sirupsen/logrus"
-	"gitlab.cern.ch/fts/lmt/mock"
-	"gitlab.cern.ch/fts/lmt/proxy"
-	"golang.org/x/net/websocket"
+	"io/ioutil"
 	"net/http"
 	"os"
 	"path"
-	"time"
+
+	log "github.com/Sirupsen/logrus"
+	"gitlab.cern.ch/fts/lmt/proxy"
+	"golang.org/x/net/websocket"
 )
 
-var filepath string
+var staticDir string
 
 func init() {
 	cwd, _ := os.Getwd()
-	filepath = path.Join(cwd, "mock", "sample.txt")
+	staticDir = path.Join(cwd, "static")
 }
 
 func main() {
-	// origin & target URLs for websocket config
-	var origin = "http://localhost"
-	var target = "ws://localhost:8080/socket"
-	http.Handle("/socket", websocket.Handler(proxy.WebSocketProxy))
+	log.Info("Serving static assets from ", staticDir)
+
+	http.HandleFunc("/", homeHandler)
+	http.Handle("/socket", websocket.Handler(proxy.Handler))
+	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir(staticDir+"/"))))
 	log.Info("Listening on http://localhost:8080")
-	go func() {
-		time.Sleep(time.Second * 1)
-		config, err := websocket.NewConfig(target, origin)
-		if err != nil {
-			log.Fatal(err)
-		}
-		c := &mock.ClientMock{
-			Config: config,
-		}
-		c.Connect()
-		time.Sleep(time.Second * 1)
-		c.UploadFile(filepath)
-	}()
 	log.Fatal(http.ListenAndServe(":8080", nil))
+}
+
+func homeHandler(w http.ResponseWriter, r *http.Request) {
+	log.Info("GET /")
+
+	index := path.Join(staticDir, "index.html")
+	fd, err := os.Open(index)
+	if err != nil {
+		log.Warn(err)
+		http.NotFound(w, r)
+		return
+	}
+	defer fd.Close()
+
+	body, err := ioutil.ReadAll(fd)
+	if err != nil {
+		log.Error(err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	_, err = w.Write(body)
+	if err != nil {
+		log.Error(err)
+	}
 }
