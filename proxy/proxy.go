@@ -18,14 +18,18 @@ package proxy
 
 import (
 	"fmt"
-	log "github.com/Sirupsen/logrus"
-	"gitlab.cern.ch/fts/lmt/lmt"
-	"golang.org/x/net/websocket"
-	"io"
 	"net"
-	"sync"
-	"time"
+
+	log "github.com/Sirupsen/logrus"
+	"golang.org/x/net/websocket"
 )
+
+// Clients maps a WebSocket connection to an endpoint.
+var Clients map[string]string
+
+func init() {
+	Clients = make(map[string]string)
+}
 
 // Waits for and accepts the next TCP connection to the listener.
 func asyncAccept(listener net.Listener) (<-chan net.Conn, error) {
@@ -43,62 +47,42 @@ func asyncAccept(listener net.Listener) (<-chan net.Conn, error) {
 	return cc, nil
 }
 
-// Calls io.Copy on a WaitGroup.
-func dump(dst io.Writer, src io.Reader, wg *sync.WaitGroup) {
-	defer wg.Done()
-	io.Copy(dst, src)
-}
-
-// Starts two seperate go routines to pipe data through the proxy.
-func Pipeline(ws *websocket.Conn, conn net.Conn) {
-	log.Info("Wiring ", ws.RemoteAddr(), " <=> ", conn.RemoteAddr())
-	wg := &sync.WaitGroup{}
-	wg.Add(2)
-	go dump(ws, conn, wg)
-	go dump(conn, ws, wg)
-	wg.Wait()
+// Wire calls a proxy function to stream data from client to service.
+func Wire(c *Client, conn net.Conn) {
+	log.Info("Wiring ", c.Ws.RemoteAddr(), " <=> ", conn.RemoteAddr())
+	HTTPProxy(c, conn)
 	log.Info("Wiring terminated")
 }
 
-// Continuously pings the WebSocket to make sure it is still open. If it fails
-// to write to the WebSocket (client disconnected), it returns an error.
-func pingWebSocket(ws *websocket.Conn) <-chan error {
-	closed := make(chan error)
-	go func() {
-		for {
-			if _, err := ws.Write([]byte("PING")); err != nil {
-				closed <- err
-				close(closed)
-				return
-			}
-			time.Sleep(10 * time.Second)
-		}
-	}()
-	return closed
+func RegisterClient(uuid, endpoint string) {
+	Clients[uuid] = endpoint
 }
 
-// Assigns a TCP listener for each websocket and maintains the connections.
-func ProxyListen(ws *websocket.Conn) {
-	defer ws.Close()
+// Listen assigns a TCP listener for the client and starts the proxy service.
+func Listen(c *Client) {
+	// Listen on a new TCP port
 	listenAddress := net.TCPAddr{}
-
 	listener, err := net.ListenTCP("tcp", &listenAddress)
 	if err != nil {
 		log.Error(err)
 		return
 	}
-	transfer := lmt.Transfer{
-		Origin:       ws.RemoteAddr().String(),
-		ListenerAddr: listener.Addr().String(),
-	}
-	log.Info("Listening on ", transfer.ListenerAddr)
 	defer listener.Close()
+	log.Info("Listening on ", listener.Addr().String())
 
-	closed := pingWebSocket(ws)
+	// Register client.
+	// TODO: Generate a UUID for each client.
+	Clients[c.Ws.RemoteAddr().String()] = listener.Addr().String()
+	log.Infof("Client %s has been associated with the endpoint %s\n",
+		c.Ws.RemoteAddr().String(), listener.Addr().String())
 
+	// Recieve the onopen message from client
+	var m CtrlMsg
+	websocket.JSON.Receive(c.Ws, &m)
+
+	closed := pingWebSocket(c)
 	for {
-		ws.Write([]byte(fmt.Sprint("LISTEN ", listener.Addr())))
-
+		websocket.JSON.Send(c.Ws, []byte(fmt.Sprint("LISTEN ", listener.Addr())))
 		cc, err := asyncAccept(listener)
 		if err != nil {
 			log.Error(err)
@@ -108,27 +92,33 @@ func ProxyListen(ws *websocket.Conn) {
 		var conn net.Conn
 		var ok bool
 
+		// wait until either a request has been recieved or the websocket has
+		// been closed
 		select {
 		case conn, ok = <-cc:
 			if !ok {
 				log.Warn("Listener failed")
 				return
 			}
+			log.Info("Received request")
+
 		case closed := <-closed:
 			log.Warn(closed)
 			return
 		}
 
-		Pipeline(ws, conn)
+		Wire(c, conn)
 		conn.Close()
 	}
 
 	log.Info("Proxy finished")
 }
 
-// WebSocket Handler
-func WebSocketProxy(ws *websocket.Conn) {
+// Handler is the WebSocket handler
+func Handler(ws *websocket.Conn) {
+	defer ws.Close()
 	log.Info("Websocket proxy initiated")
-	ProxyListen(ws)
+	c := NewClient(ws)
+	Listen(c)
 	log.Info("Done here")
 }
