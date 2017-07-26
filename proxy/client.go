@@ -22,55 +22,46 @@ import (
 	"golang.org/x/net/websocket"
 )
 
-// CtrlMsg is used to exchange messages with the client over a WebSocket
-// connection.
-type CtrlMsg struct {
-	Action string `json:"action,omitempty"`
-}
-
 // Client represents a WebSocket client.
-type Client struct {
+type client struct {
+	ID string
 	Ws *websocket.Conn
 }
 
-// NewClient constructs a new WebSocket Client.
-func NewClient(ws *websocket.Conn) *Client {
-	return &Client{
+// newClient constructs a new WebSocket Client.
+func newClient(ws *websocket.Conn) *client {
+	uuid, err := NewUUID()
+	if err != nil {
+		log.Fatal(err)
+	}
+	return &client{
+		ID: uuid,
 		Ws: ws,
 	}
 }
 
-// SendMsg encodes a CtrlMsg and sends it to the client.
-func (c *Client) SendMsg(m *CtrlMsg) <-chan error {
-	err := make(chan error)
-	go func() {
-		defer close(err)
-		err <- websocket.JSON.Send(c.Ws, *m)
-	}()
-	return err
+// sendMsg encodes a ctrlMsg and sends it to the client.
+func (c *client) sendMsg(m *ctrlMsg) error {
+	return websocket.JSON.Send(c.Ws, *m)
 }
 
-// WsReader waits on a WebSocket connection until a frame can be read.
-func WsReader(c *Client) <-chan []byte {
+// readFrame waits on a WebSocket connection until a frame can be read.
+func (c *client) readFrame() []byte {
 	var frame []byte
-	wire := make(chan []byte, len(frame))
-	go func() {
-		for {
-			if err := websocket.Message.Receive(c.Ws, &frame); err == nil {
-				wire <- frame
-			}
+	for {
+		if err := websocket.Message.Receive(c.Ws, &frame); err == nil {
+			return frame
 		}
-	}()
-	return wire
+	}
 }
 
 // Continuously pings the WebSocket to make sure it is still open. If it fails
 // to write to the WebSocket (client disconnected), it returns an error.
-func pingWebSocket(c *Client) <-chan error {
+func (c *client) ping() <-chan error {
 	closed := make(chan error)
 	go func() {
 		for {
-			if err := websocket.JSON.Send(c.Ws, []byte("PING")); err != nil {
+			if err := websocket.JSON.Send(c.Ws, pingMsg); err != nil {
 				closed <- err
 				close(closed)
 				return

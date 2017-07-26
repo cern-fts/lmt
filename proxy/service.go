@@ -24,7 +24,7 @@ import (
 	"net/http"
 	"net/http/httputil"
 
-	log "github.com/Sirupsen/logrus"
+	"github.com/Sirupsen/logrus"
 )
 
 type nopCloser struct {
@@ -33,38 +33,60 @@ type nopCloser struct {
 
 func (nopCloser) Close() error { return nil }
 
-// HTTPProxy handles HTTP requests from service.
-func HTTPProxy(c *Client, conn net.Conn) {
-	// Read HTTP request into buffer
+func responseHeaders(t *transfer) http.Header {
+	return http.Header{
+		"Content-Type":   {"application/octet-stream"},
+		"Accept-Ranges":  {"bytes"},
+		"Content-Length": {string(t.FileData.Size)},
+	}
+}
+
+// httpProxy handles HTTP requests from service.
+func httpProxy(c *client, conn net.Conn) {
+	// Read and parse incoming HTTP request
 	buf := bufio.NewReader(conn)
 	req, err := http.ReadRequest(buf)
 	if err != nil {
-		panic(err)
+		log.WithFields(logrus.Fields{
+			"event": "http_request_parse_error",
+			"data":  err,
+		}).Fatal(err)
 	}
 	// Log request
 	dumpReq, err := httputil.DumpRequest(req, true)
 	if err != nil {
 		log.Error(err)
 	}
-	log.Info(string(dumpReq))
+	log.WithFields(logrus.Fields{
+		"event": "http_request",
+		"data":  string(dumpReq),
+	}).Info(string(dumpReq))
 
-	// Respond to request.
-	// TODO: write filedata to the response's body.
 	switch req.Method {
 	case "HEAD":
+
 		r := http.Response{
 			Status:     "200",
 			StatusCode: 200,
+			Header:     responseHeaders(Clients[c.ID]),
 		}
 		r.Write(conn)
 
 	case "GET":
-		_ = c.SendMsg(&CtrlMsg{Action: "ready"})
-		wire := WsReader(c)
+
+		err := c.sendMsg(&readyMsg)
+		if err != nil {
+			log.WithFields(logrus.Fields{
+				"event": "client_communication_error",
+				"data":  err,
+			}).Fatal(err)
+		}
+		frame := c.readFrame()
 		r := http.Response{
 			Status:     "200",
 			StatusCode: 200,
-			Body:       nopCloser{bytes.NewBuffer(<-wire)},
+			Header:     responseHeaders(Clients[c.ID]),
+			Body:       nopCloser{bytes.NewBuffer(frame)},
 		}
 		r.Write(conn)
 	}

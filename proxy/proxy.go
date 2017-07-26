@@ -17,21 +17,20 @@
 package proxy
 
 import (
-	"fmt"
 	"net"
 
-	log "github.com/Sirupsen/logrus"
+	"github.com/Sirupsen/logrus"
 	"golang.org/x/net/websocket"
 )
 
 // Clients maps a WebSocket connection to an endpoint.
-var Clients map[string]string
+var Clients map[string]*transfer
 
 func init() {
-	Clients = make(map[string]string)
+	Clients = make(map[string]*transfer)
 }
 
-// Waits for and accepts the next TCP connection to the listener.
+// asyncAccept waits for and accepts the next TCP connection to the listener.
 func asyncAccept(listener net.Listener) (<-chan net.Conn, error) {
 	cc := make(chan net.Conn)
 
@@ -39,7 +38,6 @@ func asyncAccept(listener net.Listener) (<-chan net.Conn, error) {
 		defer close(cc)
 		conn, err := listener.Accept()
 		if err == nil {
-			log.Info("Received connection!")
 			cc <- conn
 		}
 	}()
@@ -47,19 +45,29 @@ func asyncAccept(listener net.Listener) (<-chan net.Conn, error) {
 	return cc, nil
 }
 
-// Wire calls a proxy function to stream data from client to service.
-func Wire(c *Client, conn net.Conn) {
-	log.Info("Wiring ", c.Ws.RemoteAddr(), " <=> ", conn.RemoteAddr())
-	HTTPProxy(c, conn)
-	log.Info("Wiring terminated")
+// tunnel calls a proxy function to stream data from client to service.
+func tunnel(c *client, conn net.Conn) {
+	log.WithFields(logrus.Fields{
+		"event": "wiring_started",
+	}).Info("Wiring ", c.Ws.RemoteAddr(), " <=> ", conn.RemoteAddr())
+	httpProxy(c, conn)
+	log.WithFields(logrus.Fields{
+		"event": "wiring_finished",
+	}).Info("Wiring finished")
+
 }
 
-func RegisterClient(uuid, endpoint string) {
-	Clients[uuid] = endpoint
+// registerClient registers a new transfer.
+func registerClient(uuid, origin, endpoint string, f *FileData) {
+	Clients[uuid] = &transfer{
+		Origin:   origin,
+		Endpoint: endpoint,
+		FileData: f,
+	}
 }
 
-// Listen assigns a TCP listener for the client and starts the proxy service.
-func Listen(c *Client) {
+// listen assigns a TCP listener for the client and starts the proxy service.
+func listen(c *client) {
 	// Listen on a new TCP port
 	listenAddress := net.TCPAddr{}
 	listener, err := net.ListenTCP("tcp", &listenAddress)
@@ -68,57 +76,96 @@ func Listen(c *Client) {
 		return
 	}
 	defer listener.Close()
-	log.Info("Listening on ", listener.Addr().String())
-
-	// Register client.
-	// TODO: Generate a UUID for each client.
-	Clients[c.Ws.RemoteAddr().String()] = listener.Addr().String()
-	log.Infof("Client %s has been associated with the endpoint %s\n",
-		c.Ws.RemoteAddr().String(), listener.Addr().String())
+	log.WithFields(logrus.Fields{
+		"event": "new_listener",
+		"data":  listener.Addr().String(),
+	}).Info("Listening on ", listener.Addr().String())
 
 	// Recieve the onopen message from client
-	var m CtrlMsg
-	websocket.JSON.Receive(c.Ws, &m)
+	var f FileData
+	err = websocket.JSON.Receive(c.Ws, &f)
+	if err != nil {
+		log.WithFields(logrus.Fields{
+			"event": "onopen_message_error",
+		}).Error(err)
+	}
+	log.WithFields(logrus.Fields{
+		"event": "onopen_message_success",
+		"data":  f,
+	}).Info("Recieved JSON from websocket")
 
-	closed := pingWebSocket(c)
+	// Register client.
+	registerClient(c.ID, c.Ws.RemoteAddr().String(), listener.Addr().String(), &f)
+	log.WithFields(logrus.Fields{
+		"event": "client_registered",
+		"data":  listener.Addr().String(),
+	}).Infof("Client %s has been associated with the endpoint %s",
+		c.Ws.RemoteAddr().String(), listener.Addr().String())
+
+	endpointMsg := &ctrlMsg{
+		Action: "transfer",
+		Data:   listener.Addr().String(),
+	}
+	c.sendMsg(endpointMsg)
+	closed := c.ping()
 	for {
-		websocket.JSON.Send(c.Ws, []byte(fmt.Sprint("LISTEN ", listener.Addr())))
+		// websocket.JSON.Send(c.Ws, []byte(fmt.Sprint("LISTEN ", listener.Addr())))
 		cc, err := asyncAccept(listener)
 		if err != nil {
 			log.Error(err)
 			break
 		}
 
+		log.WithFields(logrus.Fields{
+			"event": "recieved_tcp_connection",
+		}).Info("Recieved TCP connection")
+
 		var conn net.Conn
 		var ok bool
-
 		// wait until either a request has been recieved or the websocket has
 		// been closed
 		select {
 		case conn, ok = <-cc:
 			if !ok {
-				log.Warn("Listener failed")
+				log.WithFields(logrus.Fields{
+					"event": "listener_failed",
+				}).Warn("Listener failed")
 				return
 			}
-			log.Info("Received request")
+			log.WithFields(logrus.Fields{
+				"event": "recieved_request",
+			}).Info("Received request")
 
 		case closed := <-closed:
-			log.Warn(closed)
+			log.WithFields(logrus.Fields{
+				"event": "websocket_closed",
+			}).Warn(closed)
 			return
 		}
 
-		Wire(c, conn)
+		tunnel(c, conn)
 		conn.Close()
 	}
 
-	log.Info("Proxy finished")
+	log.WithFields(logrus.Fields{
+		"event": "listener_finised",
+	}).Info("listener finished")
 }
 
 // Handler is the WebSocket handler
 func Handler(ws *websocket.Conn) {
 	defer ws.Close()
-	log.Info("Websocket proxy initiated")
-	c := NewClient(ws)
-	Listen(c)
-	log.Info("Done here")
+	log.WithFields(logrus.Fields{
+		"event": "websocket_handler_initiated",
+		"data":  ws.RemoteAddr().String(),
+	}).Info("Websocket handler initiated")
+	// Assign a UUID for the WebSocket connection
+	c := newClient(ws)
+	// Listen for service requests.
+	listen(c)
+
+	log.WithFields(logrus.Fields{
+		"event": "websocket_handler_finished",
+		"data":  ws.RemoteAddr().String(),
+	}).Info("Websocket proxy finished")
 }
