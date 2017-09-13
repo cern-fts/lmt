@@ -23,6 +23,7 @@ import (
 	"path"
 
 	log "github.com/Sirupsen/logrus"
+	"github.com/gorilla/mux"
 	"gitlab.cern.ch/fts/lmt/proxy"
 	"golang.org/x/net/websocket"
 )
@@ -35,13 +36,14 @@ func init() {
 }
 
 func main() {
+	r := mux.NewRouter()
 	log.Info("Serving static assets from ", staticDir)
-
-	http.HandleFunc("/", homeHandler)
-	http.Handle("/socket", websocket.Handler(proxy.Handler))
-	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir(staticDir+"/"))))
+	r.HandleFunc("/", homeHandler)
+	r.PathPrefix("/static/").Handler(http.StripPrefix("/static/", http.FileServer(http.Dir(staticDir+"/"))))
+	r.HandleFunc("/transfer/{id}", proxy.ServiceHandler)
+	r.Handle("/socket", websocket.Handler(proxy.ClientHandler))
 	log.Info("Listening on http://localhost:8080")
-	log.Fatal(http.ListenAndServe(":8080", nil))
+	log.Fatal(http.ListenAndServe(":8080", r))
 }
 
 func homeHandler(w http.ResponseWriter, r *http.Request) {
