@@ -37,11 +37,15 @@ func init() {
 
 func main() {
 	r := mux.NewRouter()
-	log.Info("Serving static assets from ", staticDir)
+	// Serve static files.
 	r.HandleFunc("/", homeHandler)
 	r.PathPrefix("/static/").Handler(http.StripPrefix("/static/", http.FileServer(http.Dir(staticDir+"/"))))
+	// Endpoint to be called by the transfer service (FTS)
 	r.HandleFunc("/transfer/{id}", proxy.ServiceHandler)
+	// Endpoint to be called the client (web browser)
 	r.Handle("/socket", websocket.Handler(proxy.ClientHandler))
+
+	// Start the web service
 	log.Info("Listening on http://localhost:8080")
 	log.Fatal(http.ListenAndServe(":8080", r))
 }

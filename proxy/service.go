@@ -17,43 +17,19 @@
 package proxy
 
 import (
-	"bufio"
-	"bytes"
+	"fmt"
 	"io"
-	"net"
 	"net/http"
 	"net/http/httputil"
 
 	"github.com/Sirupsen/logrus"
+	"github.com/gorilla/mux"
 )
 
-type nopCloser struct {
-	io.Reader
-}
-
-func (nopCloser) Close() error { return nil }
-
-func responseHeaders(t *transfer) http.Header {
-	return http.Header{
-		"Content-Type":   {"application/octet-stream"},
-		"Accept-Ranges":  {"bytes"},
-		"Content-Length": {string(t.FileData.Size)},
-	}
-}
-
-// httpProxy handles HTTP requests from service.
-func httpProxy(c *client, conn net.Conn) {
-	// Read and parse incoming HTTP request
-	buf := bufio.NewReader(conn)
-	req, err := http.ReadRequest(buf)
-	if err != nil {
-		log.WithFields(logrus.Fields{
-			"event": "http_request_parse_error",
-			"data":  err,
-		}).Fatal(err)
-	}
+// ServiceHandler handles HTTP requests from service (FTS) to the proxy.
+func ServiceHandler(w http.ResponseWriter, r *http.Request) {
 	// Log request
-	dumpReq, err := httputil.DumpRequest(req, true)
+	dumpReq, err := httputil.DumpRequest(r, true)
 	if err != nil {
 		log.Error(err)
 	}
@@ -62,32 +38,37 @@ func httpProxy(c *client, conn net.Conn) {
 		"data":  string(dumpReq),
 	}).Info(string(dumpReq))
 
-	switch req.Method {
-	case "HEAD":
+	// Parse request vars and get transferID
+	vars := mux.Vars(r)
+	transferID := vars["id"]
 
-		r := http.Response{
-			Status:     "200",
-			StatusCode: 200,
-			Header:     responseHeaders(Clients[c.ID]),
-		}
-		r.Write(conn)
+	if transfer, found := Clients[transferID]; !found {
+		// Transfer not found.
+		w.WriteHeader(http.StatusNotFound)
+	} else {
+		// Transfer exists, set response headers.
+		w.Header().Set("Content-Type", "application/octet-stream")
+		w.Header().Set("Accept-Ranges", "bytes")
+		w.Header().Set("Content-Length", fmt.Sprintf("%d", transfer.fileData.Size))
 
-	case "GET":
-
-		err := c.sendMsg(&readyMsg)
-		if err != nil {
+		if r.Method == "GET" {
+			c := transfer.client
 			log.WithFields(logrus.Fields{
-				"event": "client_communication_error",
-				"data":  err,
-			}).Fatal(err)
+				"event": "wiring_started",
+			}).Info("Wiring ", c.Ws.RemoteAddr(), " <=> ", r.RemoteAddr)
+			// Notify client that the service is ready to start the transfer.
+			err := c.sendMsg(&readyMsg)
+			if err != nil {
+				log.WithFields(logrus.Fields{
+					"event": "client_communication_error",
+					"data":  err,
+				}).Error(err)
+			}
+			// Stream data from client (websocket connection) to service.
+			io.Copy(w, c.Ws)
+			log.WithFields(logrus.Fields{
+				"event": "wiring_finished",
+			}).Info("Wiring finished")
 		}
-		frame := c.readFrame()
-		r := http.Response{
-			Status:     "200",
-			StatusCode: 200,
-			Header:     responseHeaders(Clients[c.ID]),
-			Body:       nopCloser{bytes.NewBuffer(frame)},
-		}
-		r.Write(conn)
 	}
 }

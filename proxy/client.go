@@ -19,25 +19,32 @@ package proxy
 import (
 	"time"
 
+	"github.com/Sirupsen/logrus"
 	"golang.org/x/net/websocket"
 )
 
-// Client represents a WebSocket client.
+// client represents a WebSocket client.
 type client struct {
 	ID string
 	Ws *websocket.Conn
 }
 
-// newClient constructs a new WebSocket Client.
-func newClient(ws *websocket.Conn) *client {
-	uuid, err := NewUUID()
-	if err != nil {
-		log.Fatal(err)
-	}
-	return &client{
-		ID: uuid,
+// baseURL for endpoints to be called by FTS.
+const baseURL = "http://localhost:8080/transfer/"
+
+// registerClient creates a new client and adds it to the Clients map.
+func registerClient(ws *websocket.Conn, clientID string, f *fileData) *client {
+	c := &client{
+		ID: clientID,
 		Ws: ws,
 	}
+	// add new transfer to the map.
+	Clients[clientID] = &transfer{
+		client:   c,
+		fileData: f,
+		endPoint: baseURL + clientID,
+	}
+	return c
 }
 
 // sendMsg encodes a ctrlMsg and sends it to the client.
@@ -62,12 +69,72 @@ func (c *client) ping() <-chan error {
 	go func() {
 		for {
 			if err := websocket.JSON.Send(c.Ws, pingMsg); err != nil {
+				log.WithFields(logrus.Fields{
+					"event": "ping_client_fail",
+				}).Info("Failed to ping client.")
 				closed <- err
 				close(closed)
 				return
 			}
+			log.WithFields(logrus.Fields{
+				"event": "ping_client_success",
+			}).Info("Pinged client.")
 			time.Sleep(10 * time.Second)
 		}
 	}()
 	return closed
+}
+
+// ClientHandler handles incoming websocket connections.
+func ClientHandler(ws *websocket.Conn) {
+	defer ws.Close()
+	log.WithFields(logrus.Fields{
+		"event": "websocket_handler_initiated",
+		"data":  ws.RemoteAddr().String(),
+	}).Info("Websocket handler initiated")
+	// Recieve the onopen message from client
+	var f fileData
+	err := websocket.JSON.Receive(ws, &f)
+	if err != nil {
+		log.WithFields(logrus.Fields{
+			"event": "onopen_message_error",
+		}).Error(err)
+	}
+	log.WithFields(logrus.Fields{
+		"event": "onopen_message_success",
+		"data":  f,
+	}).Info("Recieved JSON from websocket")
+
+	// Register a new client.
+	c := registerClient(ws, f.DelegationID, &f)
+	log.WithFields(logrus.Fields{
+		"event": "client_registered",
+		"data":  c.ID,
+	}).Infof("Client %s has been associated with delegationID %s",
+		c.Ws.RemoteAddr().String(), c.ID)
+
+	// Send endpoint URL to client.
+	endpointMsg := &ctrlMsg{
+		Action: "transfer",
+		Data:   Clients[c.ID].endPoint,
+	}
+	c.sendMsg(endpointMsg)
+
+	closed := c.ping()
+	for {
+		// wait until the websocket has been closed
+		select {
+		case closed := <-closed:
+			log.WithFields(logrus.Fields{
+				"event": "websocket_closed",
+			}).Warn(closed)
+			return
+		}
+
+	}
+
+	log.WithFields(logrus.Fields{
+		"event": "websocket_handler_finished",
+		"data":  ws.RemoteAddr().String(),
+	}).Info("Websocket proxy finished")
 }

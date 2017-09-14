@@ -18,15 +18,16 @@ package proxy
 
 // transfer represents a transfer request submitted by a client.
 type transfer struct {
-	Origin   string
-	Endpoint string
-	FileData *fileData
+	client   *client
+	fileData *fileData
+	endPoint string
 }
 
 // fileData represents the details of the file to be transfered.
 type fileData struct {
-	Name string `json:"name,omitempty"`
-	Size int    `json:"size,omitempty"`
+	Name         string `json:"name,omitempty"`
+	Size         int    `json:"size,omitempty"`
+	DelegationID string `json:"delegationID,omitempty"`
 }
 
 // ctrlMsg is used to exchange messages with the client over a WebSocket
