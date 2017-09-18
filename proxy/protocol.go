@@ -44,4 +44,7 @@ var (
 	readyMsg = ctrlMsg{
 		Action: "ready",
 	}
+	finishedMsg = ctrlMsg{
+		Action: "finished",
+	}
 )

@@ -65,10 +65,24 @@ func ServiceHandler(w http.ResponseWriter, r *http.Request) {
 				}).Error(err)
 			}
 			// Stream data from client (websocket connection) to service.
-			io.Copy(w, c.Ws)
+			_, err = io.CopyN(w, c.Ws, int64(transfer.fileData.Size))
+			if err != nil {
+				log.WithFields(logrus.Fields{
+					"event": "proxy_tunneling_error",
+					"data":  err,
+				}).Error(err)
+			}
 			log.WithFields(logrus.Fields{
 				"event": "wiring_finished",
 			}).Info("Wiring finished")
+			// Notify client that the transfer has been successfully completed.
+			err = c.sendMsg(&finishedMsg)
+			if err != nil {
+				log.WithFields(logrus.Fields{
+					"event": "client_communication_error",
+					"data":  err,
+				}).Error(err)
+			}
 		}
 	}
 }
