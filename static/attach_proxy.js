@@ -63,7 +63,6 @@ function AttachProxy(param) {
     if (controlMsg.action == "ready") {
       // Send file through websocket.
       ws.send(file.slice(slice_start, slice_end));
-      ws.close()
       return;
     }
   };
