@@ -26,7 +26,7 @@ type transfer struct {
 // fileData represents the details of the file to be transfered.
 type fileData struct {
 	Name         string `json:"name,omitempty"`
-	Size         int    `json:"size,omitempty"`
+	Size         int64  `json:"size,omitempty"`
 	DelegationID string `json:"delegationID,omitempty"`
 }
 
