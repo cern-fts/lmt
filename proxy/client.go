@@ -32,17 +32,17 @@ type client struct {
 // baseURL for endpoints to be called by FTS.
 const baseURL = "http://localhost:8080/transfer/"
 
-// registerClient creates a new client and adds it to the Clients map.
-func registerClient(ws *websocket.Conn, clientID string, f *fileData) *client {
+// registerClient creates a new client and adds it to the Transfers map.
+func registerClient(ws *websocket.Conn, transferID string, f *fileData) *client {
 	c := &client{
-		ID: clientID,
+		ID: transferID,
 		Ws: ws,
 	}
 	// add new transfer to the map.
-	Clients[clientID] = &transfer{
+	Transfers[transferID] = &transfer{
 		client:   c,
 		fileData: f,
-		endPoint: baseURL + clientID,
+		endPoint: baseURL + transferID,
 	}
 	return c
 }
@@ -116,7 +116,7 @@ func ClientHandler(ws *websocket.Conn) {
 	// Send endpoint URL to client.
 	endpointMsg := &ctrlMsg{
 		Action: "transfer",
-		Data:   Clients[c.ID].endPoint,
+		Data:   Transfers[c.ID].endPoint,
 	}
 	c.sendMsg(endpointMsg)
 

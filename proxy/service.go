@@ -42,7 +42,7 @@ func ServiceHandler(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	transferID := vars["id"]
 
-	if transfer, found := Clients[transferID]; !found {
+	if transfer, found := Transfers[transferID]; !found {
 		// Transfer not found.
 		w.WriteHeader(http.StatusNotFound)
 	} else {
@@ -65,7 +65,7 @@ func ServiceHandler(w http.ResponseWriter, r *http.Request) {
 				}).Error(err)
 			}
 			// Stream data from client (websocket connection) to service.
-			_, err = io.CopyN(w, c.Ws, int64(transfer.fileData.Size))
+			_, err = io.CopyN(w, c.Ws, transfer.fileData.Size)
 			if err != nil {
 				log.WithFields(logrus.Fields{
 					"event": "proxy_tunneling_error",

@@ -16,9 +16,9 @@
 
 package proxy
 
-// Clients maps a WebSocket connection to an endpoint.
-var Clients map[string]*transfer
+// Transfers maps a transfer request submitted via websocket to an endpoint.
+var Transfers map[string]*transfer
 
 func init() {
-	Clients = make(map[string]*transfer)
+	Transfers = make(map[string]*transfer)
 }
