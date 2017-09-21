@@ -18,6 +18,7 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 	"os"
@@ -41,15 +42,18 @@ func main() {
 	// Serve static files.
 	r.HandleFunc("/", homeHandler)
 	r.PathPrefix("/static/").Handler(http.StripPrefix("/static/", http.FileServer(http.Dir(staticDir+"/"))))
-	// Endpoint to be called by the transfer service (FTS)
+	// Endpoint to be called by the transfer service (FTS).
 	r.HandleFunc("/transfer/{id}", proxy.ServiceHandler)
-	// Endpoint to be called the client (web browser)
+	// Endpoint to be called by the client (web browser).
 	r.Handle("/socket", websocket.Handler(proxy.ClientHandler))
-
+	// Parse command-line flags to set the listening address for the proxy
+	// service and the base URL for the transfer endpoints.
 	port := flag.String("listen", ":8080", "port to listen on")
 	flag.Parse()
-	// Start the web service
-	log.Infof("Listening on http://localhost%s", *port)
+	addr := fmt.Sprintf("http://localhost%s", *port)
+	proxy.BaseURL = fmt.Sprintf("%s/%s/", addr, "transfer")
+	// Start the web service.
+	log.Infof("Listening on %s", addr)
 	log.Fatal(http.ListenAndServe(*port, r))
 }
 

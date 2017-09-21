@@ -16,6 +16,9 @@
 
 package proxy
 
+// BaseURL for transfer endpoints to be called by FTS.
+var BaseURL string
+
 // Transfers maps a transfer request submitted via websocket to an endpoint.
 var Transfers map[string]*transfer
 
