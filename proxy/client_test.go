@@ -49,3 +49,54 @@ func TestWebsocketDial(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+func TestClientHandler(t *testing.T) {
+	// Start the test server.
+	once.Do(startServer)
+	// Generate a random delegationID to be used for the transfer.
+	delegationID, err := NewUUID()
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Test cases.
+	tt := []struct {
+		name   string
+		origin string
+		url    string
+		file   fileData
+	}{
+		{
+			name:   "transfer registered successfully",
+			origin: "http://localhost",
+			url:    fmt.Sprintf("ws://%s/socket", serverAddr),
+			file: fileData{
+				Name:         "sample.txt",
+				Size:         3875,
+				DelegationID: delegationID,
+			},
+		},
+	}
+
+	for _, tc := range tt {
+		t.Run(tc.name, func(t *testing.T) {
+			// Dial websocket.
+			ws, err := websocket.Dial(tc.url, "", tc.origin)
+			if err != nil {
+				t.Fatal(err)
+			}
+			// Register transfer request.
+			err = websocket.JSON.Send(ws, tc.file)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			// Read the service response.
+			var endpointMsg ctrlMsg
+			err = websocket.JSON.Receive(ws, &endpointMsg)
+			if err != nil {
+				t.Fatal(err)
+			}
+			log.Infof("%v", endpointMsg)
+		})
+	}
+}

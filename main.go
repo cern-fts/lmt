@@ -46,7 +46,7 @@ func main() {
 	// Endpoint to be called the client (web browser)
 	r.Handle("/socket", websocket.Handler(proxy.ClientHandler))
 
-	port := flag.String("listen", ":8080", "a string")
+	port := flag.String("listen", ":8080", "port to listen on")
 	flag.Parse()
 	// Start the web service
 	log.Infof("Listening on http://localhost%s", *port)
