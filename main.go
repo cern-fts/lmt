@@ -17,6 +17,7 @@
 package main
 
 import (
+	"flag"
 	"io/ioutil"
 	"net/http"
 	"os"
@@ -45,9 +46,11 @@ func main() {
 	// Endpoint to be called the client (web browser)
 	r.Handle("/socket", websocket.Handler(proxy.ClientHandler))
 
+	port := flag.String("listen", ":8080", "a string")
+	flag.Parse()
 	// Start the web service
-	log.Info("Listening on http://localhost:8080")
-	log.Fatal(http.ListenAndServe(":8080", r))
+	log.Infof("Listening on http://localhost%s", *port)
+	log.Fatal(http.ListenAndServe(*port, r))
 }
 
 func homeHandler(w http.ResponseWriter, r *http.Request) {
