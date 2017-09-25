@@ -24,6 +24,8 @@ import (
 	"os"
 	"path"
 
+	_ "net/http/pprof"
+
 	log "github.com/Sirupsen/logrus"
 	"github.com/gorilla/mux"
 	"gitlab.cern.ch/fts/lmt/proxy"
@@ -49,12 +51,20 @@ func main() {
 	// Parse command-line flags to set the listening address for the proxy
 	// service and the base URL for the transfer endpoints.
 	port := flag.String("listen", ":8080", "port to listen on")
+	debug := flag.Bool("debug", false, "debug mode")
 	flag.Parse()
 	addr := fmt.Sprintf("http://localhost%s", *port)
 	proxy.BaseURL = fmt.Sprintf("%s/%s/", addr, "transfer")
-	// Start the web service.
 	log.Infof("Listening on %s", addr)
-	log.Fatal(http.ListenAndServe(*port, r))
+	// Start the web service.
+	if *debug {
+		// Attach performance profiling endpoints, available through the
+		// DefaultServeMux.
+		http.Handle("/", r)
+		log.Fatal(http.ListenAndServe(*port, http.DefaultServeMux))
+	} else {
+		log.Fatal(http.ListenAndServe(*port, r))
+	}
 }
 
 func homeHandler(w http.ResponseWriter, r *http.Request) {
