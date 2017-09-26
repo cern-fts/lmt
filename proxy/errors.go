@@ -14,9 +14,7 @@
  * limitations under the License.
  */
 
-package main
-
-// errors.
+package proxy
 
 const (
 	ErrTransferNotFound       = Error("transfer not found")
