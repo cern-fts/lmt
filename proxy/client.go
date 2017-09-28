@@ -82,6 +82,13 @@ func (c *client) ping() <-chan error {
 	return closed
 }
 
+// close removes the transfer from the transfers map and closes the
+// corresponding websocket connection.
+func (c *client) close() error {
+	delete(Transfers, c.ID)
+	return c.Ws.Close()
+}
+
 // ClientHandler handles incoming websocket connections.
 func ClientHandler(ws *websocket.Conn) {
 	defer ws.Close()

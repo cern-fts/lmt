@@ -21,7 +21,7 @@ function AttachProxy(param) {
     Math.random().toString(36).substring(2, 15);
 
   var filedata = { name: file.name, size: file.size, delegationID: delegationID };
-  console.log(filedata)
+  console.log(filedata);
 
   var slice_start = 0;
   var slice_end = filedata.size;
@@ -44,28 +44,32 @@ function AttachProxy(param) {
 
 
   ws.onopen = function () {
-    ws.send(JSON.stringify(filedata))
-  };
+    ws.send(JSON.stringify(filedata));
+  }
 
 
   ws.onmessage = function (event) {
-    // Parse controlMsg
+    // Parse controlMsg.
     var controlMsg = JSON.parse(event.data);
     // Log message to shell.
     shell.WriteLine(JSON.stringify(controlMsg));
-    console.log(event.data)
+    console.log(event.data);
 
-
-    if (controlMsg.action == "transfer") {
-      endpoint = controlMsg.data;
+    switch (controlMsg.action) {
+      case 'transfer':
+        endpoint = controlMsg.data;
+        break;
+      case 'ready':
+        // LMT proxy is ready to start the transfer.
+        ws.send(file.slice(slice_start, slice_end));
+        break;
+      case 'finished':
+        // Transfer finished successfully.
+        success = true;
+        break;
+      default:
     }
-    // Last mile proxy is ready.
-    if (controlMsg.action == "ready") {
-      // Send file through websocket.
-      ws.send(file.slice(slice_start, slice_end));
-      return;
-    }
-  };
+  }
 
   ws.onclose = function () {
     if (success) {

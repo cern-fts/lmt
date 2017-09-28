@@ -83,6 +83,15 @@ func ServiceHandler(w http.ResponseWriter, r *http.Request) {
 					"data":  err,
 				}).Error(err)
 			}
+			// Remove the transfer from the Transfers map and close the
+			// websocket connection.
+			err = c.close()
+			if err != nil {
+				log.WithFields(logrus.Fields{
+					"event": "websocket_close_error",
+					"data":  err,
+				}).Error(err)
+			}
 		}
 	}
 }
