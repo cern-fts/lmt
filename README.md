@@ -22,17 +22,19 @@ Example:
 ```bash
 ./lmt -listen=:8080
 ```
-## Run it inside Docker
+### Run it inside Docker
 1. Build the Docker image:
-```bash
-docker build -t lmt .
-```
+
+    ```bash
+    docker build -t lmt .
+    ```
 2. Run it:
-```bash
-docker run -it lmt
-```
+
+    ```bash
+    docker run -it lmt
+    ```
 
 ## Development
 A development environment has been set up using [Vagrant](https://www.vagrantup.com/docs/installation/). It contains all the dependencies and configuration files necessary to work on the development of the project.
 
-Just hit `vagrant up` from within the project directory and everything is installed and configured for you to work.
+If you have Vagrant installed, just hit `vagrant up` from within the project directory and everything is installed and configured for you to work.
