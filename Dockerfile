@@ -10,7 +10,7 @@ WORKDIR /go/src/gitlab.cern.ch/fts/lmt
 RUN go install
 
 # Run the lmt service by default when the container starts.
-ENTRYPOINT /go/bin/lmt -listen=:8080 -debug
+ENTRYPOINT /go/bin/lmt -port=8080 -debug
 
 # Document that the service listens on port 8080.
 EXPOSE 8080

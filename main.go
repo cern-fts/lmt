@@ -32,9 +32,10 @@ import (
 	"golang.org/x/net/websocket"
 )
 
-var staticDir string
+var staticDir, hostname string
 
 func init() {
+	hostname, _ = os.Hostname()
 	cwd, _ := os.Getwd()
 	staticDir = path.Join(cwd, "static")
 }
@@ -50,10 +51,10 @@ func main() {
 	r.Handle("/socket", websocket.Handler(proxy.ClientHandler))
 	// Parse command-line flags to set the listening address for the proxy
 	// service and the base URL for the transfer endpoints.
-	port := flag.String("listen", ":8080", "port to listen on")
+	port := flag.String("port", "8080", "port to listen on")
 	debug := flag.Bool("debug", false, "debug mode")
 	flag.Parse()
-	addr := fmt.Sprintf("http://localhost%s", *port)
+	addr := fmt.Sprintf("http://%s:%s", hostname, *port)
 	proxy.BaseURL = fmt.Sprintf("%s/%s/", addr, "transfer")
 	log.Infof("Listening on %s", addr)
 	// Start the web service.
@@ -61,9 +62,9 @@ func main() {
 		// Attach performance profiling endpoints, available through the
 		// DefaultServeMux.
 		http.Handle("/", r)
-		log.Fatal(http.ListenAndServe(*port, http.DefaultServeMux))
+		log.Fatal(http.ListenAndServe(fmt.Sprintf(":%s", *port), http.DefaultServeMux))
 	} else {
-		log.Fatal(http.ListenAndServe(*port, r))
+		log.Fatal(http.ListenAndServe(fmt.Sprintf(":%s", *port), r))
 	}
 }
 

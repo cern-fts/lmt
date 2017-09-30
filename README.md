@@ -15,12 +15,12 @@ go build -o lmt .
 Usage of ./lmt:
   -debug
     	debug mode
-  -listen string
-    	port to listen on (default ":8080")
+  -port string
+    	port to listen on (default "8080")
 ```
 Example:
 ```bash
-./lmt -listen=:8080
+./lmt -port=8080
 ```
 ### Run it inside Docker
 1. Build the Docker image:
