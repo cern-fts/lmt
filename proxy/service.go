@@ -51,7 +51,10 @@ func ServiceHandler(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Accept-Ranges", "bytes")
 		w.Header().Set("Content-Length", fmt.Sprintf("%d", transfer.fileData.Size))
 
-		if r.Method == "GET" {
+		switch r.Method {
+		case "HEAD":
+			w.WriteHeader(http.StatusOK)
+		case "GET":
 			c := transfer.client
 			log.WithFields(logrus.Fields{
 				"event": "wiring_started",
@@ -92,6 +95,11 @@ func ServiceHandler(w http.ResponseWriter, r *http.Request) {
 					"data":  err,
 				}).Error(err)
 			}
+		default:
+			// Return 405 for all other request methods.
+			// This is especially important when a "COPY" request is received,
+			// so that FTS would later do a GET request and pull the data.
+			w.WriteHeader(http.StatusMethodNotAllowed)
 		}
 	}
 }
