@@ -49,22 +49,28 @@ func main() {
 	r.HandleFunc("/transfer/{id}", proxy.ServiceHandler)
 	// Endpoint to be called by the client (web browser).
 	r.Handle("/socket", websocket.Handler(proxy.ClientHandler))
-	// Parse command-line flags to set the listening address for the proxy
-	// service and the base URL for the transfer endpoints.
+	// Parse command-line flags to set the options for the service.
 	port := flag.String("port", "8080", "port to listen on")
 	debug := flag.Bool("debug", false, "debug mode")
+	certFile := flag.String("cert", "/etc/grid-security/hostcert.pem", "path to the server's certificate in PEM format")
+	keyFile := flag.String("key", "/etc/grid-security/hostkey.pem", "path to the server's private key in PEM format")
 	flag.Parse()
-	addr := fmt.Sprintf("http://%s:%s", hostname, *port)
-	proxy.BaseURL = fmt.Sprintf("%s/%s/", addr, "transfer")
+
+	// Set the address to listen on.
+	addr := fmt.Sprintf("https://%s:%s", hostname, *port)
 	log.Infof("Listening on %s", addr)
+	// Set the base URL to be used for transfer endpoints.
+	proxy.BaseURL = fmt.Sprintf("%s/%s/", addr, "transfer")
 	// Start the web service.
 	if *debug {
 		// Attach performance profiling endpoints, available through the
 		// DefaultServeMux.
 		http.Handle("/", r)
-		log.Fatal(http.ListenAndServe(fmt.Sprintf(":%s", *port), http.DefaultServeMux))
+		log.Fatal(http.ListenAndServeTLS(fmt.Sprintf(":%s", *port),
+			*certFile, *keyFile, http.DefaultServeMux))
 	} else {
-		log.Fatal(http.ListenAndServe(fmt.Sprintf(":%s", *port), r))
+		log.Fatal(http.ListenAndServeTLS(fmt.Sprintf(":%s", *port),
+			*certFile, *keyFile, r))
 	}
 }
 
