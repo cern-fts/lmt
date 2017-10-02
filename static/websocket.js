@@ -20,7 +20,7 @@ inputElement.addEventListener("change", handleFiles, false);
 function handleFiles() {
   var selectedFile = this.files[0];
   var params = new Object();
-  params.url = "ws://localhost:8080/socket";
+  params.url = "wss://lmt.cern.ch:8080/socket";
   params.file = selectedFile;
   AttachProxy(params);
 }
