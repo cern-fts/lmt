@@ -17,9 +17,11 @@
 package proxy
 
 import (
+	"net/http/httputil"
 	"time"
 
 	"github.com/Sirupsen/logrus"
+	voms "gitlab.cern.ch/flutter/go-proxy"
 	"golang.org/x/net/websocket"
 )
 
@@ -31,6 +33,20 @@ type client struct {
 
 // registerClient creates a new client and adds it to the Transfers map.
 func registerClient(ws *websocket.Conn, transferID string, f *fileData) *client {
+	req := ws.Request()
+	dumpReq, err := httputil.DumpRequest(req, true)
+	if err != nil {
+		log.Error(err)
+	}
+	log.WithFields(logrus.Fields{
+		"event": "ws_http_request",
+		"data":  string(dumpReq),
+	}).Info(string(dumpReq))
+
+	identity, err := X509Identity(req)
+	if err != nil {
+		log.Error(err)
+	}
 	c := &client{
 		ID: transferID,
 		Ws: ws,
@@ -39,6 +55,7 @@ func registerClient(ws *websocket.Conn, transferID string, f *fileData) *client 
 	Transfers[transferID] = &transfer{
 		client:   c,
 		fileData: f,
+		identity: voms.NameRepr(&identity),
 		endPoint: BaseURL + transferID,
 	}
 	return c

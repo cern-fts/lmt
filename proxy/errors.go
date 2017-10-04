@@ -17,14 +17,10 @@
 package proxy
 
 const (
-	ErrTransferNotFound       = Error("transfer not found")
-	ErrTransferExists         = Error("transfer already exists")
-	ErrTransferUserCNRequired = Error("transfer user CN required")
-	ErrTransferTokenRequired  = Error("transfer token required")
+	errTransferNotFound       = "transfer not found"
+	errTransferExists         = "transfer already exists"
+	errTransferUserCNRequired = "transfer user CN required"
+	errTransferTokenRequired  = "transfer token required"
+	errProxyCertRequired      = "a x059 proxy is required"
+	errAccessForbidden        = "x509 proxy certificates identity do not match"
 )
-
-// Error represents a lmt error.
-type Error string
-
-// Error returns the error message.
-func (e Error) Error() string { return string(e) }

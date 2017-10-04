@@ -20,6 +20,7 @@ package proxy
 type transfer struct {
 	client   *client
 	fileData *fileData
+	identity string
 	endPoint string
 }
 

@@ -24,6 +24,7 @@ import (
 
 	"github.com/Sirupsen/logrus"
 	"github.com/gorilla/mux"
+	voms "gitlab.cern.ch/flutter/go-proxy"
 )
 
 // ServiceHandler handles HTTP requests from service (FTS) to the proxy.
@@ -38,7 +39,11 @@ func ServiceHandler(w http.ResponseWriter, r *http.Request) {
 		"data":  string(dumpReq),
 	}).Info(string(dumpReq))
 
-	// Parse request vars and get transferID
+	identity, err := X509Identity(r)
+	if err != nil {
+		log.Error(err)
+	}
+	// Parse request vars and get transferID.
 	vars := mux.Vars(r)
 	transferID := vars["id"]
 
@@ -46,60 +51,70 @@ func ServiceHandler(w http.ResponseWriter, r *http.Request) {
 		// Transfer not found.
 		w.WriteHeader(http.StatusNotFound)
 	} else {
-		// Transfer exists, set response headers.
-		w.Header().Set("Content-Type", "application/octet-stream")
-		w.Header().Set("Accept-Ranges", "bytes")
-		w.Header().Set("Content-Length", fmt.Sprintf("%d", transfer.fileData.Size))
+		// Transfer exists, check permissions
+		if !CheckIdentity(transferID, voms.NameRepr(&identity)) {
+			// FTS does not have permission to access the file.
+			w.WriteHeader(http.StatusForbidden)
+			log.WithFields(logrus.Fields{
+				"event": "access_forbidden",
+				"data":  string(voms.NameRepr(&identity)),
+			}).Error(errAccessForbidden)
+		} else {
+			// FTS has the correct permissions.
+			w.Header().Set("Content-Type", "application/octet-stream")
+			w.Header().Set("Accept-Ranges", "bytes")
+			w.Header().Set("Content-Length", fmt.Sprintf("%d", transfer.fileData.Size))
 
-		switch r.Method {
-		case "HEAD":
-			w.WriteHeader(http.StatusOK)
-		case "GET":
-			c := transfer.client
-			log.WithFields(logrus.Fields{
-				"event": "wiring_started",
-			}).Info("Wiring ", c.Ws.RemoteAddr(), " <=> ", r.RemoteAddr)
-			// Notify client that the service is ready to start the transfer.
-			err := c.sendMsg(&readyMsg)
-			if err != nil {
+			switch r.Method {
+			case "HEAD":
+				w.WriteHeader(http.StatusOK)
+			case "GET":
+				c := transfer.client
 				log.WithFields(logrus.Fields{
-					"event": "client_communication_error",
-					"data":  err,
-				}).Error(err)
-			}
-			// Stream data from client (websocket connection) to service.
-			_, err = io.CopyN(w, c.Ws, transfer.fileData.Size)
-			if err != nil {
+					"event": "wiring_started",
+				}).Info("Wiring ", c.Ws.RemoteAddr(), " <=> ", r.RemoteAddr)
+				// Notify client that the service is ready to start the transfer.
+				err := c.sendMsg(&readyMsg)
+				if err != nil {
+					log.WithFields(logrus.Fields{
+						"event": "client_communication_error",
+						"data":  err,
+					}).Error(err)
+				}
+				// Stream data from client (websocket connection) to service.
+				_, err = io.CopyN(w, c.Ws, transfer.fileData.Size)
+				if err != nil {
+					log.WithFields(logrus.Fields{
+						"event": "proxy_tunneling_error",
+						"data":  err,
+					}).Error(err)
+				}
 				log.WithFields(logrus.Fields{
-					"event": "proxy_tunneling_error",
-					"data":  err,
-				}).Error(err)
+					"event": "wiring_finished",
+				}).Info("Wiring finished")
+				// Notify client that the transfer has been successfully completed.
+				err = c.sendMsg(&finishedMsg)
+				if err != nil {
+					log.WithFields(logrus.Fields{
+						"event": "client_communication_error",
+						"data":  err,
+					}).Error(err)
+				}
+				// Remove the transfer from the Transfers map and close the
+				// websocket connection.
+				err = c.close()
+				if err != nil {
+					log.WithFields(logrus.Fields{
+						"event": "websocket_close_error",
+						"data":  err,
+					}).Error(err)
+				}
+			default:
+				// Return 405 for all other request methods.
+				// This is especially important when a "COPY" request is received,
+				// so that FTS would later do a GET request and pull the data.
+				w.WriteHeader(http.StatusMethodNotAllowed)
 			}
-			log.WithFields(logrus.Fields{
-				"event": "wiring_finished",
-			}).Info("Wiring finished")
-			// Notify client that the transfer has been successfully completed.
-			err = c.sendMsg(&finishedMsg)
-			if err != nil {
-				log.WithFields(logrus.Fields{
-					"event": "client_communication_error",
-					"data":  err,
-				}).Error(err)
-			}
-			// Remove the transfer from the Transfers map and close the
-			// websocket connection.
-			err = c.close()
-			if err != nil {
-				log.WithFields(logrus.Fields{
-					"event": "websocket_close_error",
-					"data":  err,
-				}).Error(err)
-			}
-		default:
-			// Return 405 for all other request methods.
-			// This is especially important when a "COPY" request is received,
-			// so that FTS would later do a GET request and pull the data.
-			w.WriteHeader(http.StatusMethodNotAllowed)
 		}
 	}
 }
