@@ -17,6 +17,7 @@
 package main
 
 import (
+	"crypto/tls"
 	"flag"
 	"fmt"
 	"io/ioutil"
@@ -51,7 +52,6 @@ func main() {
 	r.Handle("/socket", websocket.Handler(proxy.ClientHandler))
 	// Parse command-line flags to set the options for the service.
 	port := flag.String("port", "8080", "port to listen on")
-	debug := flag.Bool("debug", false, "debug mode")
 	certFile := flag.String("cert", "/etc/grid-security/hostcert.pem", "path to the server's certificate in PEM format")
 	keyFile := flag.String("key", "/etc/grid-security/hostkey.pem", "path to the server's private key in PEM format")
 	flag.Parse()
@@ -62,16 +62,14 @@ func main() {
 	// Set the base URL to be used for transfer endpoints.
 	proxy.BaseURL = fmt.Sprintf("%s/%s/", addr, "transfer")
 	// Start the web service.
-	if *debug {
-		// Attach performance profiling endpoints, available through the
-		// DefaultServeMux.
-		http.Handle("/", r)
-		log.Fatal(http.ListenAndServeTLS(fmt.Sprintf(":%s", *port),
-			*certFile, *keyFile, http.DefaultServeMux))
-	} else {
-		log.Fatal(http.ListenAndServeTLS(fmt.Sprintf(":%s", *port),
-			*certFile, *keyFile, r))
+	server := &http.Server{
+		Addr:    fmt.Sprintf("%s:%s", hostname, *port),
+		Handler: r,
+		TLSConfig: &tls.Config{
+			ClientAuth: tls.RequireAnyClientCert,
+		},
 	}
+	log.Fatal(server.ListenAndServeTLS(*certFile, *keyFile))
 }
 
 func homeHandler(w http.ResponseWriter, r *http.Request) {
