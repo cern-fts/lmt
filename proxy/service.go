@@ -45,7 +45,7 @@ func ServiceHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	// Parse request vars and get transferID.
 	vars := mux.Vars(r)
-	transferID := vars["id"]
+	transferID := vars["transferID"]
 
 	if transfer, found := Transfers[transferID]; !found {
 		// Transfer not found.

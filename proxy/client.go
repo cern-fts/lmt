@@ -17,6 +17,7 @@
 package proxy
 
 import (
+	"fmt"
 	"net/http/httputil"
 	"time"
 
@@ -32,7 +33,7 @@ type client struct {
 }
 
 // registerClient creates a new client and adds it to the Transfers map.
-func registerClient(ws *websocket.Conn, transferID string, f *fileData) *client {
+func registerClient(ws *websocket.Conn, UUID string, f *fileData) *client {
 	req := ws.Request()
 	dumpReq, err := httputil.DumpRequest(req, true)
 	if err != nil {
@@ -47,16 +48,17 @@ func registerClient(ws *websocket.Conn, transferID string, f *fileData) *client 
 	if err != nil {
 		log.Error(err)
 	}
+	// add new transfer to the map.
+	transferID := fmt.Sprintf("%s/%s", UUID, f.Name)
 	c := &client{
 		ID: transferID,
 		Ws: ws,
 	}
-	// add new transfer to the map.
 	Transfers[transferID] = &transfer{
 		client:   c,
 		fileData: f,
 		identity: voms.NameRepr(&identity),
-		endPoint: BaseURL + transferID,
+		endPoint: fmt.Sprintf("%s/%s/%s", BaseURL, transferID, f.Name),
 	}
 	return c
 }

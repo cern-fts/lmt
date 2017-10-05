@@ -47,7 +47,7 @@ func main() {
 	r.HandleFunc("/", homeHandler)
 	r.PathPrefix("/static/").Handler(http.StripPrefix("/static/", http.FileServer(http.Dir(staticDir+"/"))))
 	// Endpoint to be called by the transfer service (FTS).
-	r.HandleFunc("/transfer/{id}", proxy.ServiceHandler)
+	r.HandleFunc("/transfer/{transferID}/{filename}", proxy.ServiceHandler)
 	// Endpoint to be called by the client (web browser).
 	r.Handle("/socket", websocket.Handler(proxy.ClientHandler))
 	// Parse command-line flags to set the options for the service.
@@ -60,7 +60,7 @@ func main() {
 	addr := fmt.Sprintf("https://%s:%s", hostname, *port)
 	log.Infof("Listening on %s", addr)
 	// Set the base URL to be used for transfer endpoints.
-	proxy.BaseURL = fmt.Sprintf("%s/%s/", addr, "transfer")
+	proxy.BaseURL = fmt.Sprintf("%s/%s", addr, "transfer")
 	// Start the web service.
 	server := &http.Server{
 		Addr:    fmt.Sprintf("%s:%s", hostname, *port),
