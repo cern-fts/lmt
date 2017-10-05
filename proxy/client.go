@@ -58,7 +58,7 @@ func registerClient(ws *websocket.Conn, UUID string, f *fileData) *client {
 		client:   c,
 		fileData: f,
 		identity: voms.NameRepr(&identity),
-		endPoint: fmt.Sprintf("%s/%s/%s", BaseURL, transferID, f.Name),
+		endPoint: fmt.Sprintf("%s/%s", BaseURL, transferID),
 	}
 	return c
 }
