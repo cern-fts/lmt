@@ -53,11 +53,6 @@ func TestWebsocketDial(t *testing.T) {
 func TestClientHandler(t *testing.T) {
 	// Start the test server.
 	once.Do(startServer)
-	// Generate a random delegationID to be used for the transfer.
-	delegationID, err := NewUUID()
-	if err != nil {
-		t.Fatal(err)
-	}
 	// Test cases.
 	tt := []struct {
 		name   string
@@ -70,9 +65,8 @@ func TestClientHandler(t *testing.T) {
 			origin: "http://localhost",
 			url:    fmt.Sprintf("ws://%s/socket", serverAddr),
 			file: fileData{
-				Name:         "sample.txt",
-				Size:         3875,
-				DelegationID: delegationID,
+				Name: "sample.txt",
+				Size: 3875,
 			},
 		},
 	}

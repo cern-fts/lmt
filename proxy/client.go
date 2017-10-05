@@ -127,11 +127,12 @@ func ClientHandler(ws *websocket.Conn) {
 	}).Info("Recieved JSON from websocket")
 
 	// Register a new client.
-	c := registerClient(ws, f.DelegationID, &f)
+	uid, err := NewUUID()
+	c := registerClient(ws, uid, &f)
 	log.WithFields(logrus.Fields{
 		"event": "client_registered",
 		"data":  c.ID,
-	}).Infof("Client %s has been associated with delegationID %s",
+	}).Infof("Client %s has been associated with ID %s",
 		c.Ws.RemoteAddr().String(), c.ID)
 
 	// Send endpoint URL to client.
