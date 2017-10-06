@@ -46,6 +46,8 @@ func ServiceHandler(w http.ResponseWriter, r *http.Request) {
 	// Parse request vars and get transferID.
 	vars := mux.Vars(r)
 	transferID := vars["transferID"]
+	filename := vars["filename"]
+	transferID = fmt.Sprintf("%s/%s", transferID, filename)
 
 	if transfer, found := Transfers[transferID]; !found {
 		// Transfer not found.
