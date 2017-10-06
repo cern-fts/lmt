@@ -33,7 +33,7 @@ type client struct {
 }
 
 // registerClient creates a new client and adds it to the Transfers map.
-func registerClient(ws *websocket.Conn, UUID string, f *fileData) *client {
+func registerClient(ws *websocket.Conn, f *fileData) *client {
 	req := ws.Request()
 	dumpReq, err := httputil.DumpRequest(req, true)
 	if err != nil {
@@ -48,8 +48,13 @@ func registerClient(ws *websocket.Conn, UUID string, f *fileData) *client {
 	if err != nil {
 		log.Error(err)
 	}
+
+	delegationID, err := X509DelegationID(req)
+	if err != nil {
+		log.Error(err)
+	}
 	// add new transfer to the map.
-	transferID := fmt.Sprintf("%s/%s", UUID, f.Name)
+	transferID := TransferID(delegationID, f.Name)
 	c := &client{
 		ID: transferID,
 		Ws: ws,
@@ -129,8 +134,7 @@ func ClientHandler(ws *websocket.Conn) {
 	}).Info("Recieved JSON from websocket")
 
 	// Register a new client.
-	uid, err := NewUUID()
-	c := registerClient(ws, uid, &f)
+	c := registerClient(ws, &f)
 	log.WithFields(logrus.Fields{
 		"event": "client_registered",
 		"data":  c.ID,

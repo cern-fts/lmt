@@ -67,8 +67,39 @@ func X509Identity(req *http.Request) (pkix.Name, error) {
 	return identity, err
 }
 
+// X509DelegationID parses an HTTP request in order to extract the X509 proxy
+// certificate's delegation ID.
+func X509DelegationID(req *http.Request) (string, error) {
+	var delegationID string
+	var err error
+	x509 := voms.X509Proxy{}
+
+	if req.TLS.PeerCertificates == nil {
+		err = errors.New(errProxyCertRequired)
+		log.WithFields(logrus.Fields{
+			"event": "no_x505_proxy_cert",
+		}).Error(err)
+	} else {
+		if err = x509.InitFromCertificates(req.TLS.PeerCertificates); err != nil {
+			log.Error(err)
+			log.WithFields(logrus.Fields{
+				"event": "x509_proxy_cert_init_error",
+			}).Error(err)
+		}
+		delegationID = x509.DelegationID()
+	}
+	return delegationID, err
+}
+
 // CheckIdentity checks if the identity of the FTS job matches the one
 // that was provided by the client.
 func CheckIdentity(transferID, identity string) bool {
 	return Transfers[transferID].identity == identity
+}
+
+// TransferID concatenates the user's delegation ID and
+// the filename the user's wish to transfer to create
+// the transfer endpoint.
+func TransferID(delegationID, filename string) string {
+	return fmt.Sprintf("%s/%s", delegationID, filename)
 }
