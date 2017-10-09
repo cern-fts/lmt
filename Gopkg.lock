@@ -21,6 +21,12 @@
 
 [[projects]]
   branch = "master"
+  name = "gitlab.cern.ch/flutter/go-proxy"
+  packages = ["."]
+  revision = "919a10a449ccedd5e01b1badaf7e82cd45de46dc"
+
+[[projects]]
+  branch = "master"
   name = "golang.org/x/crypto"
   packages = ["ssh/terminal"]
   revision = "847319b7fc94cab682988f93da778204da164588"
@@ -40,6 +46,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "519ac7f8f6fde866f9dd0cbec373fef62cc14f858c2da5358e75d4883ea5c923"
+  inputs-digest = "c799b040df6ca3683a68a66267933c0bfc812bb2852e6e9f790805d21cf7dba9"
   solver-name = "gps-cdcl"
   solver-version = 1
