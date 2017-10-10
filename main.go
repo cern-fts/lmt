@@ -45,6 +45,8 @@ func main() {
 	r := mux.NewRouter()
 	// Serve static files.
 	r.HandleFunc("/", homeHandler)
+	// Health-check endpoint.
+	r.HandleFunc("/health-check", proxy.HealthCheckHandler)
 	r.PathPrefix("/static/").Handler(http.StripPrefix("/static/", http.FileServer(http.Dir(staticDir+"/"))))
 	// Endpoint to be called by the transfer service (FTS).
 	r.HandleFunc("/transfer/{delegationID}/{filename}", proxy.ServiceHandler)
