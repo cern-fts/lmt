@@ -22,7 +22,7 @@ The proxy maintains the WebSocket connection open, waiting for the File Transfer
 On the other end, `LMT` will also be listening to incoming TCP connections at `https://hostname:port/transfer`.
 
 When `FTS` contacts the proxy and asks for the files, the proxy checks if:
-1. The origin of the HTTP has permissions to access the file. That is, if the identity of the X509 delegation certificate the request has is the same as the one the client (`WebFTS`) had when it registered the files to be transferred.
+1. The origin which sent the HTTP request has permissions to access the file. That is, if the identity of the X509 delegation certificate the request has is the same as the one the client (`WebFTS`) had when it registered the files to be transferred.
 2. The files exist, and the client has not closed the WebSocket connection.
 
 
