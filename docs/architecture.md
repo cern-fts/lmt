@@ -1,6 +1,6 @@
 # Architecture
 
-On one end, `LMT` listens to requests from WebFTS at `wss://hostname:port/socket`.
+On one end, `LMT` listens to requests from `WebFTS` at `wss://hostname:port/socket`.
 
 When a client (`WebFTS`) connects to `LMT` via a WSS (WebSocket Secure) connection, it sends the metadata for all the files it wishes to transfer via `FTS`.
 
