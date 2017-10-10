@@ -13,10 +13,12 @@ go build -o lmt .
 ### Usage
 ```shell
 Usage of ./lmt:
-  -debug
-    	debug mode
+  -cert string
+        path to the server's certificate in PEM format (default "/etc/grid-security/hostcert.pem")
+  -key string
+        path to the server's private key in PEM format (default "/etc/grid-security/hostkey.pem")
   -port string
-    	port to listen on (default "8080")
+        port to listen on (default "8080")
 ```
 Example:
 ```bash
