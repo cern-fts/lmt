@@ -4,7 +4,7 @@ On one end, `LMT` listens to requests from WebFTS at `wss://hostname:port/socket
 
 When a client (`WebFTS`) connects to `LMT` via a WSS (WebSocket Secure) connection, it sends the metadata for all the files it wishes to transfer via `FTS`.
 
-For each file, `LMT` creates an endpoint of the form '/transfer/delegationID/filename' and maps it to that particular client.
+For each file, `LMT` would then create an endpoint of the form `/transfer/delegationID/filename` and map it to that particular client.
 It then informs the client (`WebFTS`) of the endpoint it created for each file via a JSON-based protocol message sent over the same WebSocket connection.
 
 A `transfer` message might look something like the following:
