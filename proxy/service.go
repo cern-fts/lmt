@@ -27,6 +27,12 @@ import (
 	voms "gitlab.cern.ch/flutter/go-proxy"
 )
 
+type Config struct {
+	Headers map[string]string `yaml:"additional_http_headers"`
+}
+
+var ResponseHeaders map[string]string
+
 // ServiceHandler handles HTTP requests from service (FTS) to the proxy.
 func ServiceHandler(w http.ResponseWriter, r *http.Request) {
 	// Log request

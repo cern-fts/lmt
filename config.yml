@@ -1,0 +1,3 @@
+additional_http_headers:
+    Access-Control-Allow-Origin: "https://webfts-dev-cc7.cern.ch"
+    Access-Control-Allow-Credentials: "true"

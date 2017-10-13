@@ -31,6 +31,7 @@ import (
 	"github.com/gorilla/mux"
 	"gitlab.cern.ch/fts/lmt/proxy"
 	"golang.org/x/net/websocket"
+	yaml "gopkg.in/yaml.v2"
 )
 
 var staticDir, hostname string
@@ -39,6 +40,18 @@ func init() {
 	hostname, _ = os.Hostname()
 	cwd, _ := os.Getwd()
 	staticDir = path.Join(cwd, "static")
+	// Parse YAML for service configs
+	config := proxy.Config{}
+	yamlFile, err := ioutil.ReadFile("config.yml")
+	if err != nil {
+		log.Error(err)
+	}
+	err = yaml.Unmarshal([]byte(yamlFile), &config)
+	if err != nil {
+		log.Error(err)
+	}
+	// Set response headers
+	proxy.ResponseHeaders = config.Headers
 }
 
 func main() {
