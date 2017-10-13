@@ -44,11 +44,15 @@ func init() {
 	config := proxy.Config{}
 	yamlFile, err := ioutil.ReadFile("config.yml")
 	if err != nil {
-		log.Error(err)
+		log.WithFields(log.Fields{
+			"event": "config_file_read_err",
+		}).Fatal(err)
 	}
 	err = yaml.Unmarshal([]byte(yamlFile), &config)
 	if err != nil {
-		log.Error(err)
+		log.WithFields(log.Fields{
+			"event": "yaml_parse_err",
+		}).Fatal(err)
 	}
 	// Set response headers
 	proxy.ResponseHeaders = config.Headers
