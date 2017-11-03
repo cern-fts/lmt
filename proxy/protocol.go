@@ -24,7 +24,7 @@ type transfer struct {
 	endPoint string
 }
 
-// fileData represents the details of the file to be transfered.
+// fileData represents the details of the file to be transferred.
 type fileData struct {
 	Name string `json:"name,omitempty"`
 	Size int64  `json:"size,omitempty"`

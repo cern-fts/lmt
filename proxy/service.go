@@ -27,10 +27,14 @@ import (
 	voms "gitlab.cern.ch/flutter/go-proxy"
 )
 
+// Config struct is used to unmarshal the configuration found in
+// the config.yml file
 type Config struct {
 	Headers map[string]string `yaml:"additional_http_headers"`
 }
 
+// ResponseHeaders stores key-value pairs of additional HTTP headers
+// that are configured via the config.yml file.
 var ResponseHeaders map[string]string
 
 // ServiceHandler handles HTTP requests from service (FTS) to the proxy.

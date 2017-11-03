@@ -120,7 +120,7 @@ func ClientHandler(ws *websocket.Conn) {
 		"event": "websocket_handler_initiated",
 		"data":  ws.RemoteAddr().String(),
 	}).Info("Websocket handler initiated")
-	// Recieve the onopen message from client
+	// Receive the onopen message from client
 	var f fileData
 	err := websocket.JSON.Receive(ws, &f)
 	if err != nil {
@@ -131,7 +131,7 @@ func ClientHandler(ws *websocket.Conn) {
 	log.WithFields(logrus.Fields{
 		"event": "onopen_message_success",
 		"data":  f,
-	}).Info("Recieved JSON from websocket")
+	}).Info("Received JSON from websocket")
 
 	// Register a new client.
 	c := registerClient(ws, &f)
