@@ -40,6 +40,14 @@ func init() {
 	hostname, _ = os.Hostname()
 	cwd, _ := os.Getwd()
 	staticDir = path.Join(cwd, "static")
+
+        f, err := os.OpenFile("/var/log/lmt.log", os.O_RDWR | os.O_CREATE | os.O_APPEND, 0666)
+        if err == nil {
+             log.SetOutput(f)
+        } else {
+             log.Info("Failed to log to file, using default stderr")
+        }
+
 	// Parse YAML for service configs
 	config := proxy.Config{}
 	yamlFile, err := ioutil.ReadFile("config.yml")
