@@ -6,8 +6,7 @@ Release: 1
 License: LICENSE
 Url: https://gitlab.cern.ch/fts/lmt
 Summary: Proxy service in GO
-BuildRequires:  compiler(go-compilers)
-
+BuildRequires:  %{?go_compiler:compiler(go-compiler)}%{!?go_compiler:golang}
 %description
 LMT is a proxy service that extends the File Transfer Service in order to enable local data transfers on the WLCG infrastructure.
 
