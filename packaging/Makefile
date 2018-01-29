@@ -18,7 +18,8 @@ RPMDEFINES_SRC=--define='_topdir $(RPMBUILD)' \
 	--define='_sourcedir $(CWD)' \
 	--define='_builddir %{_topdir}/BUILD' \
 	--define='_srcrpmdir $(SRPMS)' \
-	--define='_rpmdir $(RPMS)'
+	--define='_rpmdir $(RPMS)' \
+        --define='_debug_package %{nil}'
 
 RPMDEFINES_BIN=--define='_topdir $(RPMBUILD)' \
 	--define='_sourcedir %{_topdir}/SOURCES' \
