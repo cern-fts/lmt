@@ -13,7 +13,7 @@ LMT is a proxy service that extends the File Transfer Service in order to enable
 %prep
 
 %build
-%gobuild -o bin/NAME %{import_path}
+%gobuild -o bin/lmt .
 
 %install
 mkdir -p %{buildroot}/%{_bindir}/root/go/src/gitlab.cern.ch/fts/lmt
