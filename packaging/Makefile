@@ -25,7 +25,7 @@ RPMDEFINES_BIN=--define='_topdir $(RPMBUILD)' \
 	--define='_builddir %{_topdir}/BUILD' \
 	--define='_srcrpmdir $(SRPMS).' \
 	--define='_rpmdir $(RPMS)' \
-        --define='debug_package %{nil}'
+        --define='_debug_package %{nil}'
 
 
 all: srpm
