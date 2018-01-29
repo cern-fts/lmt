@@ -16,7 +16,11 @@ LMT is a proxy service that extends the File Transfer Service in order to enable
 %setup -q -n %{name}-%{version}
 
 %build
-%gobuild -o bin/lmt .
+mkdir -p src/gitlab.cern.ch/fts/
+ln -s ../../../ src/gitlab.cern.ch/fts/lmt
+
+export GOPATH=$(pwd):%{gopath}
+go build -o bin/lmt gitlab.cern.ch/fts/lmt
 
 %install
 mkdir -p %{buildroot}/%{_bindir}/root/go/src/gitlab.cern.ch/fts/lmt
@@ -25,7 +29,6 @@ cp bin/lmt %{buildroot}/%{_bindir}/root/go/src/gitlab.cern.ch/fts/lmt
 
 %files
 %{_bindir}/root/go/src/gitlab.cern.ch/fts/lmt/lmt
-
 
 %clean
 
