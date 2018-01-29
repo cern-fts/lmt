@@ -11,6 +11,7 @@ BuildRequires:  %{?go_compiler:compiler(go-compiler)}%{!?go_compiler:golang}
 LMT is a proxy service that extends the File Transfer Service in order to enable local data transfers on the WLCG infrastructure.
 
 %prep
+%setup -q -n %{name}-%{version}
 
 %build
 %gobuild -o bin/lmt .
