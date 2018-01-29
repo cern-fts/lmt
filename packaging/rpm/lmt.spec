@@ -28,5 +28,5 @@ cp bin/lmt %{buildroot}/%{_bindir}/root/go/src/gitlab.cern.ch/fts/lmt
 %clean
 
 %changelog
-Mon Jan 29 2018  Andrea Manzi <amanzi@cern.ch> - 0.0.1
+* Mon Jan 29 2018  Andrea Manzi <amanzi@cern.ch> - 0.0.1
 - first version
