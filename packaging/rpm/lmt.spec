@@ -3,9 +3,9 @@
 Name: lmt
 Version: 0.0.1
 Release: 1
-License: LICENSE
+License: Apache 2.0
 Url: https://gitlab.cern.ch/fts/lmt
-Summary: Proxy service in GO
+Summary: FT Last mile proxy service written in Proxy in GO
 Source0: %{name}-%{version}.tar.gz
 
 BuildRequires:  %{?go_compiler:compiler(go-compiler)}%{!?go_compiler:golang}
@@ -21,15 +21,18 @@ mkdir -p src/gitlab.cern.ch/fts/
 ln -s ../../../ src/gitlab.cern.ch/fts/lmt
 
 export GOPATH=$(pwd):%{gopath}
-go build -o bin/lmt gitlab.cern.ch/fts/lmt
+go build -o bin/lmt %import_path
 
 %install
-mkdir -p %{buildroot}/%{_bindir}/root/go/src/gitlab.cern.ch/fts/lmt
-cp bin/lmt %{buildroot}/%{_bindir}/root/go/src/gitlab.cern.ch/fts/lmt
+mkdir -p %{buildroot}/%{_sysconfdir}/lmt
+mkdir -p %{buildroot}/%{_sbindir}
+cp config.yml %{buildroot}/%{_sysconfdir}/lmt
+cp bin/lmt %{buildroot}/%{_sbindir}/lmt
 
 
 %files
-%{_bindir}/root/go/src/gitlab.cern.ch/fts/lmt/lmt
+%{_sbindir}/lmt
+%{_sysconfdir}/lmt/config.yml
 
 %clean
 
