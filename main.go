@@ -47,26 +47,13 @@ func init() {
         } else {
              log.Info("Failed to log to file, using default stderr")
         }
-
-	// Parse YAML for service configs
-	config := proxy.Config{}
-	yamlFile, err := ioutil.ReadFile("config.yml")
-	if err != nil {
-		log.WithFields(log.Fields{
-			"event": "config_file_read_err",
-		}).Fatal(err)
-	}
-	err = yaml.Unmarshal([]byte(yamlFile), &config)
-	if err != nil {
-		log.WithFields(log.Fields{
-			"event": "yaml_parse_err",
-		}).Fatal(err)
-	}
-	// Set response headers
-	proxy.ResponseHeaders = config.Headers
 }
 
 func main() {
+
+        // Parse YAML for service configs
+        config := proxy.Config{}
+
 	r := mux.NewRouter()
 	// Serve static files.
 	r.HandleFunc("/", homeHandler)
@@ -77,12 +64,28 @@ func main() {
 	r.HandleFunc("/transfer/{delegationID}/{filename}", proxy.ServiceHandler)
 	// Endpoint to be called by the client (web browser).
 	r.Handle("/socket", websocket.Handler(proxy.ClientHandler))
-	// Parse command-line flags to set the options for the service.
+	
+        // Parse command-line flags to set the options for the service.
 	port := flag.String("port", "8080", "port to listen on")
 	certFile := flag.String("cert", "/etc/grid-security/hostcert.pem", "path to the server's certificate in PEM format")
 	keyFile := flag.String("key", "/etc/grid-security/hostkey.pem", "path to the server's private key in PEM format")
-	flag.Parse()
+	confFile :=  flag.String("conf", "config.yml", "extra configuration file")
+        flag.Parse()
 
+        yamlFile, err := ioutil.ReadFile(*confFile)
+        if err != nil {
+                log.WithFields(log.Fields{
+                        "event": "config_file_read_err",
+                }).Fatal(err)
+        }
+        err = yaml.Unmarshal([]byte(yamlFile), &config)
+        if err != nil {
+                log.WithFields(log.Fields{
+                        "event": "yaml_parse_err",
+                }).Fatal(err)
+        }
+        // Set response headers
+        proxy.ResponseHeaders = config.Headers
 	// Set the address to listen on.
 	addr := fmt.Sprintf("https://%s:%s", hostname, *port)
 	log.Infof("Listening on %s", addr)
