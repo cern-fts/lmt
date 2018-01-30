@@ -1,5 +1,11 @@
 %global import_path    gitlab.cern.ch/fts/lmt
 
+%if %{?fedora}%{!?fedora:0} >= 17 || %{?rhel}%{!?rhel:0} >= 7
+%global systemd 1
+%else
+%global systemd 0
+%endif
+
 Name: lmt
 Version: 0.0.1
 Release: 1
@@ -26,13 +32,19 @@ go build -o bin/lmt %import_path
 %install
 mkdir -p %{buildroot}/%{_sysconfdir}/lmt
 mkdir -p %{buildroot}/%{_sbindir}
+%if %systemd
+mkdir -p %{buildroot}/%{_unitdir}
+cp etc/lmt.service %{buildroot}/%{_unitdir}
+%endif
 cp config.yml %{buildroot}/%{_sysconfdir}/lmt
 cp bin/lmt %{buildroot}/%{_sbindir}/lmt
-
 
 %files
 %{_sbindir}/lmt
 %{_sysconfdir}/lmt/config.yml
+%if %systemd
+%attr(0644,root,root) %{_unitdir}/lmt.service
+%endif
 
 %clean
 

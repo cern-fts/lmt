@@ -1,0 +1,17 @@
+[Unit]
+Description=Last Mile Transfer proxy Service
+Requires=network-online.target
+After=network-online.target
+
+[Service]
+Type=simple
+ExecStart=/usr/sbin/lmt -conf /etc/lmt/config.yml
+KillMode=process
+KillSignal=SIGTERM
+SendSIGHUP=no
+SendSIGKILL=yes
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target
+
