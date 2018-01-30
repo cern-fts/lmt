@@ -15,6 +15,10 @@ Summary: FT Last mile proxy service written in Proxy in GO
 Source0: %{name}-%{version}.tar.gz
 
 BuildRequires:  %{?go_compiler:compiler(go-compiler)}%{!?go_compiler:golang}
+%if %systemd
+BuildRequires:	systemd
+%endif
+
 %description
 LMT is a proxy service that extends the File Transfer Service in order to enable local data transfers on the WLCG infrastructure.
 
