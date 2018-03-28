@@ -1,7 +1,5 @@
 #!/bin/bash
 #
-# @STARTUP_SCRIPT@            Startup script for the @STARTUP_SCRIPT@ server
-#
 # chkconfig: - 93 17
 # description: The lmt daemon
 # processname: lmt
@@ -9,17 +7,12 @@
 # Source function library
 source /etc/rc.d/init.d/functions
 
-
-# Start httpd in the C locale by default.
-LMT_LANG=${DOME_LANG-"C"}
-LMT_USER=fts3
-LMT_GROUP=fts3
-
-instance="@STARTUP_SCRIPT@"
+instance=lmt
 
 lmt=/usr/sbin/lmt
 lmtconfig=/etc/lmt/config.yml
 pidfile=/var/run/${instance}.pid
+port=80
 
 RETVAL=0
 STOP_TIMEOUT=${STOP_TIMEOUT-10}
@@ -30,11 +23,11 @@ start() {
     return 3
   fi
   echo -n $"Starting $instance: "
-  LANG=$LMT_LANG daemon --user=${LMT_USER} --pidfile=${pidfile} $lmt $lmtconfig $OPTIONS
+  daemonize  -p ${pidfile} $lmt -conf $lmtconfig -port $port $OPTIONS
   RETVAL=$?
   echo
   if [ $RETVAL = 0 ]; then
-    pid=$(ps aux | grep "$lmt $lmtconfig" | grep -v grep | awk '{print $2}')
+    pid=$(ps aux | grep "$lmt" | grep -v grep | awk '{print $2}')
     if [ ! -z $pid ]; then
       echo $pid > $pidfile
     else
