@@ -5,7 +5,7 @@ After=network-online.target
 
 [Service]
 Type=simple
-ExecStart=/usr/sbin/lmt -conf /etc/lmt/config.yml -p 80
+ExecStart=/usr/sbin/lmt -conf /etc/lmt/config.yml -port 443
 KillMode=process
 KillSignal=SIGTERM
 SendSIGHUP=no
