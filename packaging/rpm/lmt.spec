@@ -39,6 +39,9 @@ mkdir -p %{buildroot}/%{_sbindir}
 %if %systemd
 mkdir -p %{buildroot}/%{_unitdir}
 cp etc/lmt.service %{buildroot}/%{_unitdir}
+%else
+mkdir -p %{buildroot}/%{_initddir}
+cp etc/lmt %{buildroot}/%{_initddir}
 %endif
 cp config.yml %{buildroot}/%{_sysconfdir}/lmt
 cp bin/lmt %{buildroot}/%{_sbindir}/lmt
