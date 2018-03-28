@@ -51,6 +51,8 @@ cp bin/lmt %{buildroot}/%{_sbindir}/lmt
 %{_sysconfdir}/lmt/config.yml
 %if %systemd
 %attr(0644,root,root) %{_unitdir}/lmt.service
+%else
+%attr(0644,root,root) %{_initddir}/lmt
 %endif
 
 %clean
